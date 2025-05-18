@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="color-scheme" content="dark">
+	<title>Tileset Coordinates</title>
+	<style>
+		*,
+		*::before,
+		*::after {
+			box-sizing: border-box
+		}
+
+		body {
+			font-family: sans-serif;
+			margin: 20px;
+			background-color: #121212;
+			color: #e0e0e0;
+			line-height: 1.6;
+		}
+
+		h1 {
+			text-align: center;
+			color: #ffffff;
+			margin-bottom: 25px;
+			font-size: 1.25rem;
+		}
+
+		h2,
+		h3 {
+			color: #f0f0f0;
+			border-bottom: 1px solid #333;
+			font-size: 1.1rem;
+		}
+
+		.input-group {
+			margin-bottom: 20px;
+		}
+
+		.input-group label {
+			display: block;
+			font-weight: bold;
+			color: #cccccc;
+			margin-bottom: 5px;
+		}
+
+		.input-group input[type="text"],
+		.input-group input[type="number"] {
+			width: calc(100% - 24px);
+			padding: 12px;
+			border: 1px solid #444;
+			border-radius: 4px;
+			box-sizing: border-box;
+			background-color: #2a2a2a;
+			color: #e0e0e0;
+			font-size: 16px;
+		}
+
+		.input-group input[type="text"]:focus,
+		.input-group input[type="number"]:focus {
+			outline: none;
+			border-color: #007bff;
+			box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+		}
+
+		button {
+			background-color: #007bff;
+			color: white;
+			padding: 12px 20px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 16px;
+			transition: background-color 0.2s ease-in-out;
+			display: block;
+			width: 100%;
+			margin-top: 10px;
+		}
+
+		button:hover {
+			background-color: #0056b3;
+		}
+
+		#imagePreviewContainer {
+			display: none;
+		}
+
+		#imagePreviewContainer h3 {
+			margin-top: 0;
+			margin-bottom: 15px;
+			border-bottom-color: #444;
+		}
+
+		#imagePreview {
+			max-height: 110px;
+			width: auto;
+			display: block;
+			border: 1px solid #444;
+			border-radius: 4px;
+			background-color: #333;
+			image-rendering: pixelated;
+			image-rendering: -moz-crisp-edges;
+			image-rendering: crisp-edges;
+		}
+
+		#coordinatesList {
+			display: grid;
+			grid-template-columns: repeat(var(--cols, 10), 1fr);
+			overflow-y: auto;
+			border: 1px solid #3a3a3a;
+			padding: 0;
+			background-color: #242424;
+			border-radius: 4px;
+		}
+
+		#coordinatesList>p {
+			padding: 15px;
+			color: #aaa;
+			text-align: center;
+			grid-column: 1 / -1;
+		}
+
+		.coordinate-item {
+			display: grid;
+			justify-items: center;
+			align-items: center;
+			padding: 5px 5px;
+			font-size: 0.7rem;
+			cursor: pointer;
+			transition: background-color 0.2s ease;
+			color: #d0d0d0;
+		}
+
+		.coordinate-item:hover {
+			background-color: #555;
+		}
+
+		.sprite-preview {
+			width: 100%;
+			aspect-ratio: 1;
+			border: 1px solid #555555;
+			background-color: #404040;
+			image-rendering: pixelated;
+			image-rendering: -moz-crisp-edges;
+			image-rendering: crisp-edges;
+			background-repeat: no-repeat;
+			margin-bottom: 4px;
+		}
+
+		.coordinate-text {
+			font-family: "SF Mono", "Consolas", "Menlo", monospace;
+			font-size: 0.95em;
+		}
+
+		.copied-feedback {
+			font-style: italic;
+			color: #81C784;
+			font-size: 0.9em;
+			margin-left: 10px;
+			white-space: nowrap;
+			display: block;
+			margin-top: 3px;
+		}
+
+		.error-message {
+			color: #E57373;
+			margin-top: 15px;
+			padding: 10px;
+			background-color: rgba(229, 115, 115, 0.1);
+			border: 1px solid rgba(229, 115, 115, 0.3);
+			border-radius: 4px;
+			position: fixed;
+			z-index: 2;
+			inset: auto 1rem 1rem auto;
+		}
+
+		.error-message:empty {
+			display: none;
+		}
+
+		.tools {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			align-items: center;
+			justify-items: center;
+			gap: 15px;
+		}
+	</style>
+</head>
+
+<body>
+	<!--
+	# Tileset Coordinates
+	# https://github.com/UnaiYecora/Tileset-Coordinates
+	-->
+	<h1>Tileset Coordinates</h1>
+
+	<div class="tools">
+		<div class="input-group">
+			<label for="imageFilename">Image Filename (e.g., tiles.png):</label>
+			<input type="text" id="imageFilename" value="tileset.png">
+		</div>
+
+		<div class="input-group">
+			<label for="spriteSize">Sprite Size (e.g., 16, 32):</label>
+			<input type="number" id="spriteSize" value="16" min="1">
+		</div>
+
+		<button id="generateButton">Generate Coordinates</button>
+
+		<div id="imagePreviewContainer">
+			<img id="imagePreview" src="#" alt="Tileset Preview">
+		</div>
+		<p id="statusMessage" class="error-message"></p>
+	</div>
+
+	<h2>Coordinates & Sprites:</h2>
+	<div id="coordinatesList">
+		<p>Enter image details and click "Generate Coordinates".</p>
+	</div>
+
+	<script>
+		const imageFilenameInput = document.getElementById('imageFilename');
+		const spriteSizeInput = document.getElementById('spriteSize');
+		const generateButton = document.getElementById('generateButton');
+		const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+		const imagePreview = document.getElementById('imagePreview');
+		const coordinatesListDiv = document.getElementById('coordinatesList');
+		const statusMessage = document.getElementById('statusMessage');
+
+		generateButton.addEventListener('click', generateCoordinates);
+		spriteSizeInput.addEventListener('change', generateCoordinates);
+		imageFilenameInput.addEventListener('change', generateCoordinates);
+
+		function generateCoordinates() {
+			const filename = imageFilenameInput.value.trim();
+			const spriteSize = parseInt(spriteSizeInput.value);
+
+			statusMessage.textContent = '';
+			coordinatesListDiv.innerHTML = '';
+
+			if (!filename) {
+				statusMessage.textContent = 'Please enter an image filename.';
+				imagePreviewContainer.style.display = 'none';
+				document.documentElement.style.removeProperty('--cols');
+				document.documentElement.style.removeProperty('--rows');
+				return;
+			}
+			if (isNaN(spriteSize) || spriteSize <= 0) {
+				statusMessage.textContent = 'Please enter a valid positive sprite size.';
+				imagePreviewContainer.style.display = 'none';
+				document.documentElement.style.removeProperty('--cols');
+				document.documentElement.style.removeProperty('--rows');
+				return;
+			}
+
+			const mainImg = new Image();
+			mainImg.onload = () => {
+				imagePreview.src = mainImg.src;
+				imagePreviewContainer.style.display = 'block';
+
+				const imgWidth = mainImg.naturalWidth;
+				const imgHeight = mainImg.naturalHeight;
+
+				if (imgWidth === 0 || imgHeight === 0) {
+					statusMessage.textContent = `Image "${filename}" loaded but has zero dimensions.`;
+					imagePreviewContainer.style.display = 'none';
+					document.documentElement.style.removeProperty('--cols');
+					document.documentElement.style.removeProperty('--rows');
+					return;
+				}
+				if (imgWidth < spriteSize || imgHeight < spriteSize) {
+					statusMessage.textContent = `Image dimensions (${imgWidth}x${imgHeight}) are smaller than sprite size (${spriteSize}).`;
+					document.documentElement.style.removeProperty('--cols');
+					document.documentElement.style.removeProperty('--rows');
+					return;
+				}
+
+				const cols = Math.floor(imgWidth / spriteSize);
+				const rows = Math.floor(imgHeight / spriteSize);
+				document.documentElement.style.setProperty('--cols', cols > 0 ? cols : 1);
+				document.documentElement.style.setProperty('--rows', rows > 0 ? rows : 1);
+
+				let coordinatesFound = false;
+
+				for (let y = 0; y < rows; y++) {
+					for (let x = 0; x < cols; x++) {
+						coordinatesFound = true;
+						const coordArray = `[${x}, ${y}]`;
+
+						const listItem = document.createElement('div');
+						listItem.classList.add('coordinate-item');
+						listItem.tabIndex = 0;
+
+						const previewDiv = document.createElement('div');
+						previewDiv.classList.add('sprite-preview');
+						previewDiv.style.backgroundImage = `url('${mainImg.src}')`;
+						previewDiv.style.backgroundSize = `calc(var(--cols) * 100%) calc(var(--rows) * 100%)`;
+
+						const bgPosX = (cols > 1) ? (x / (cols - 1)) * 100 : 0;
+						const bgPosY = (rows > 1) ? (y / (rows - 1)) * 100 : 0;
+						previewDiv.style.backgroundPosition = `${bgPosX}% ${bgPosY}%`;
+
+						const coordTextSpan = document.createElement('span');
+						coordTextSpan.classList.add('coordinate-text');
+						coordTextSpan.textContent = coordArray;
+
+						listItem.appendChild(previewDiv);
+						listItem.appendChild(coordTextSpan);
+						listItem.title = `Click to copy ${coordArray}`;
+
+						listItem.addEventListener('click', (e) => {
+							_copyCoordinates(e);
+						});
+						listItem.addEventListener('keydown', (e) => {
+							if (e.code === 'Space' || e.code === 'Enter') {
+								e.preventDefault();
+								_copyCoordinates(e);
+							}
+						});
+						function _copyCoordinates(e) {
+							if (e.target.classList.contains('copied-feedback')) return;
+							navigator.clipboard.writeText(coordArray).then(() => {
+								const existingFeedback = listItem.querySelector('.copied-feedback');
+								if (existingFeedback) existingFeedback.remove();
+								const feedbackSpan = document.createElement('span');
+								feedbackSpan.classList.add('copied-feedback');
+								feedbackSpan.textContent = 'Copied!';
+								listItem.appendChild(feedbackSpan);
+								setTimeout(() => {
+									if (listItem.contains(feedbackSpan)) listItem.removeChild(feedbackSpan);
+								}, 1500);
+							}).catch(err => {
+								console.error('Failed to copy: ', err);
+								statusMessage.textContent = 'Failed to copy coordinates to clipboard.';
+							});
+						}
+						coordinatesListDiv.appendChild(listItem);
+					}
+				}
+				if (!coordinatesFound) {
+					if (coordinatesListDiv.innerHTML === '') {
+						coordinatesListDiv.innerHTML = '<p>No sprites could be generated with these dimensions.</p>';
+					}
+					document.documentElement.style.setProperty('--cols', 1);
+					document.documentElement.style.setProperty('--rows', 1);
+				} else {
+					const initialMsg = coordinatesListDiv.querySelector('p');
+					if (initialMsg) initialMsg.remove();
+				}
+			};
+
+			mainImg.onerror = () => {
+				statusMessage.textContent = `Error loading image "${filename}". Check console.`;
+				imagePreviewContainer.style.display = 'none';
+				document.documentElement.style.removeProperty('--cols');
+				document.documentElement.style.removeProperty('--rows');
+			};
+			mainImg.src = filename;
+		}
+
+		generateCoordinates();
+
+		if (coordinatesListDiv.children.length === 0 && !coordinatesListDiv.querySelector('p')) {
+			coordinatesListDiv.innerHTML = '<p>Enter image details and click "Generate Coordinates" or ensure "tileset.png" exists.</p>';
+		}
+	</script>
+</body>
+
+</html>
