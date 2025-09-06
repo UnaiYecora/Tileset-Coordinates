@@ -35,10 +35,6 @@
 			font-size: 1.1rem;
 		}
 
-		.input-group {
-			margin-bottom: 20px;
-		}
-
 		.input-group label {
 			display: block;
 			font-weight: bold;
@@ -47,26 +43,32 @@
 		}
 
 		.input-group input[type="text"],
-		.input-group input[type="number"] {
-			width: calc(100% - 24px);
-			padding: 12px;
+		.input-group input[type="number"],
+		select#spriteBg {
+			width: 100%;
+			padding: 0.5rem;
 			border: 1px solid #444;
 			border-radius: 4px;
 			box-sizing: border-box;
 			background-color: #2a2a2a;
 			color: #e0e0e0;
-			font-size: 16px;
+			font-size: 1rem;
 		}
 
 		.input-group input[type="text"]:focus,
-		.input-group input[type="number"]:focus {
+		.input-group input[type="number"]:focus,
+		select#spriteBg:focus {
 			outline: none;
 			border-color: #007bff;
 			box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 		}
 
+		select {
+			border: none;
+		}
+
 		button {
-			background-color: #007bff;
+			background-color: #4b555f;
 			color: white;
 			padding: 12px 20px;
 			border: none;
@@ -75,12 +77,11 @@
 			font-size: 16px;
 			transition: background-color 0.2s ease-in-out;
 			display: block;
-			width: 100%;
 			margin-top: 10px;
 		}
 
 		button:hover {
-			background-color: #0056b3;
+			background-color: #45596d;
 		}
 
 		#imagePreviewContainer {
@@ -94,7 +95,7 @@
 		}
 
 		#imagePreview {
-			max-height: 110px;
+			max-height: 60px;
 			width: auto;
 			display: block;
 			border: 1px solid #444;
@@ -131,6 +132,7 @@
 			cursor: pointer;
 			transition: background-color 0.2s ease;
 			color: #d0d0d0;
+			position: relative;
 		}
 
 		.coordinate-item:hover {
@@ -141,7 +143,7 @@
 			width: 100%;
 			aspect-ratio: 1;
 			border: 1px solid #555555;
-			background-color: #404040;
+			background-color: var(--previewbgcolor, #404040);
 			image-rendering: pixelated;
 			image-rendering: -moz-crisp-edges;
 			image-rendering: crisp-edges;
@@ -156,12 +158,19 @@
 
 		.copied-feedback {
 			font-style: italic;
-			color: #81C784;
+			background-color: #45596d;
+			color: white;
+			border-radius: 99vw;
+			padding: 0.3em 1em;
 			font-size: 0.9em;
-			margin-left: 10px;
+			margin: 0;
 			white-space: nowrap;
 			display: block;
 			margin-top: 3px;
+			position: absolute;
+			top: 0.5rem;
+			font-weight: 800;
+			box-shadow: 0 4px 8px #0000006b;
 		}
 
 		.error-message {
@@ -181,11 +190,12 @@
 		}
 
 		.tools {
-			display: grid;
-			grid-template-columns: repeat(4, 1fr);
-			align-items: center;
+			display: flex;
+			align-items: flex-end;
 			justify-items: center;
-			gap: 15px;
+			gap: 1rem;
+			flex-wrap: wrap;
+			margin-bottom: 2rem;
 		}
 	</style>
 </head>
@@ -195,9 +205,12 @@
 	# Tileset Coordinates
 	# https://github.com/UnaiYecora/Tileset-Coordinates
 	-->
-	<h1>Tileset Coordinates</h1>
 
 	<div class="tools">
+		<div id="imagePreviewContainer">
+			<img id="imagePreview" src="#" alt="Tileset Preview">
+		</div>
+
 		<div class="input-group">
 			<label for="imageFilename">Image Filename (e.g., tiles.png):</label>
 			<input type="text" id="imageFilename" value="tileset.png">
@@ -208,15 +221,19 @@
 			<input type="number" id="spriteSize" value="16" min="1">
 		</div>
 
-		<button id="generateButton">Generate Coordinates</button>
-
-		<div id="imagePreviewContainer">
-			<img id="imagePreview" src="#" alt="Tileset Preview">
+		<div class="input-group">
+			<label for="spriteBg">Transparency background:</label>
+			<select type="select" id="spriteBg" value="16" min="1">
+				<option value="dark">Dark</option>
+				<option value="light">Light</option>
+				<option value="checkered">Checkered</option>
+			</select>
 		</div>
+
+		<button id="generateButton">Generate Coordinates</button>
 		<p id="statusMessage" class="error-message"></p>
 	</div>
 
-	<h2>Coordinates & Sprites:</h2>
 	<div id="coordinatesList">
 		<p>Enter image details and click "Generate Coordinates".</p>
 	</div>
@@ -224,6 +241,7 @@
 	<script>
 		const imageFilenameInput = document.getElementById('imageFilename');
 		const spriteSizeInput = document.getElementById('spriteSize');
+		const bgInput = document.getElementById('spriteBg');
 		const generateButton = document.getElementById('generateButton');
 		const imagePreviewContainer = document.getElementById('imagePreviewContainer');
 		const imagePreview = document.getElementById('imagePreview');
@@ -231,12 +249,25 @@
 		const statusMessage = document.getElementById('statusMessage');
 
 		generateButton.addEventListener('click', generateCoordinates);
-		spriteSizeInput.addEventListener('change', generateCoordinates);
-		imageFilenameInput.addEventListener('change', generateCoordinates);
+		spriteSizeInput.addEventListener('change', () => {
+			generateCoordinates();
+			localStorage.setItem('tileset_coordinates_size', spriteSizeInput.value);
+		});
+		imageFilenameInput.addEventListener('change', () => {
+			generateCoordinates();
+			localStorage.setItem('tileset_coordinates_filename', imageFilenameInput.value.trim());
+		});
+
+		bgInput.addEventListener("change", () => {
+			generateCoordinates();
+			localStorage.setItem('tileset_coordinates_bgstyle', bgInput.value);
+		});
 
 		function generateCoordinates() {
 			const filename = imageFilenameInput.value.trim();
 			const spriteSize = parseInt(spriteSizeInput.value);
+			let bgStyle = bgInput.value;
+			document.documentElement.style.setProperty('--spriteSizePx', spriteSize + 'px');
 
 			statusMessage.textContent = '';
 			coordinatesListDiv.innerHTML = '';
@@ -296,12 +327,32 @@
 
 						const previewDiv = document.createElement('div');
 						previewDiv.classList.add('sprite-preview');
-						previewDiv.style.backgroundImage = `url('${mainImg.src}')`;
-						previewDiv.style.backgroundSize = `calc(var(--cols) * 100%) calc(var(--rows) * 100%)`;
 
 						const bgPosX = (cols > 1) ? (x / (cols - 1)) * 100 : 0;
 						const bgPosY = (rows > 1) ? (y / (rows - 1)) * 100 : 0;
-						previewDiv.style.backgroundPosition = `${bgPosX}% ${bgPosY}%`;
+
+
+						if (bgStyle === "checkered") {
+							previewDiv.style.backgroundImage = `url('${mainImg.src}'), repeating-conic-gradient(#bdbdbd 0% 25%, #6e6e6e 0% 50%)`;
+							previewDiv.style.backgroundSize = `
+								calc(var(--cols) * 100%) calc(var(--rows) * 100%),
+								calc(200% / ${spriteSize}) calc(200% / ${spriteSize})
+							`;
+							previewDiv.style.backgroundPosition = `${bgPosX}% ${bgPosY}%, 0 0`;
+							previewDiv.style.backgroundRepeat = `no-repeat, repeat`;
+						} else {
+							previewDiv.style.backgroundImage = `url('${mainImg.src}')`;
+							previewDiv.style.backgroundSize =
+								`calc(var(--cols) * 100%) calc(var(--rows) * 100%)`;
+							previewDiv.style.backgroundPosition = `${bgPosX}% ${bgPosY}%`;
+
+							if (bgStyle === "dark") {
+								document.documentElement.style.setProperty('--previewbgcolor', "#404040");
+							} else if (bgStyle === "light") {
+								document.documentElement.style.setProperty('--previewbgcolor', "#d1d1d1");
+							}
+						}
+
 
 						const coordTextSpan = document.createElement('span');
 						coordTextSpan.classList.add('coordinate-text');
@@ -353,7 +404,7 @@
 			};
 
 			mainImg.onerror = () => {
-				statusMessage.textContent = `Error loading image "${filename}". Check console.`;
+				statusMessage.textContent = `Error loading image "${filename}". Input your tileset file name.`;
 				imagePreviewContainer.style.display = 'none';
 				document.documentElement.style.removeProperty('--cols');
 				document.documentElement.style.removeProperty('--rows');
@@ -361,7 +412,18 @@
 			mainImg.src = filename;
 		}
 
-		generateCoordinates();
+		window.addEventListener('DOMContentLoaded', () => {
+			const local_filename = localStorage.getItem('tileset_coordinates_filename');
+			const local_size = localStorage.getItem('tileset_coordinates_size');
+			const local_bgstyle = localStorage.getItem('tileset_coordinates_bgstyle')
+
+			imageFilenameInput.value = local_filename ?? 'tileset.png';
+			spriteSizeInput.value = local_size ?? 16;
+			bgInput.value = local_bgstyle ?? "dark";
+
+			generateCoordinates();
+		});
+
 
 		if (coordinatesListDiv.children.length === 0 && !coordinatesListDiv.querySelector('p')) {
 			coordinatesListDiv.innerHTML = '<p>Enter image details and click "Generate Coordinates" or ensure "tileset.png" exists.</p>';
